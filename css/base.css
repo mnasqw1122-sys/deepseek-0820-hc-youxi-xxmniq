@@ -1,0 +1,184 @@
+/* ============================================================
+   base.css — 宣纸、墨色、字体、基调
+   ============================================================ */
+:root {
+  /* 宣纸 */
+  --paper: #e9e3d5;
+  --paper-2: #ded6c4;
+  --paper-3: #f3eee2;
+  --paper-dark: #cdc4ae;
+  /* 墨 */
+  --ink: #1c1a16;
+  --ink-2: #322d26;
+  --ink-3: #4f483d;
+  --ink-4: #756c5c;
+  --ink-5: #9c9284;
+  /* 朱砂 · 金 · 青 */
+  --zhu: #a8261f;
+  --zhu-b: #c8342a;
+  --gold: #b28b4e;
+  --gold-b: #e0bd76;
+  --qing: #6f9781;
+  --qing-b: #9dc0aa;
+  --azure: #4a7794;
+  /* 五行 */
+  --el-jin: #a9b0aa;
+  --el-mu: #5f9b70;
+  --el-shui: #4d80ab;
+  --el-huo: #c4553c;
+  --el-tu: #ab8547;
+  /* 语义 */
+  --good: #3f7a52;
+  --bad: #a8261f;
+  --dim: #857c6d;
+  --line: rgba(28, 26, 22, .16);
+  --line-2: rgba(28, 26, 22, .28);
+  --shadow: 0 2px 10px rgba(40, 32, 20, .16);
+  --shadow-lg: 0 10px 40px rgba(38, 30, 18, .30);
+  --font-serif: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", "Nimbus Roman", Georgia, serif;
+  --font-kai: "Kaiti SC", "STKaiti", "KaiTi", "Baoli SC", var(--font-serif);
+  --font-hei: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --r: 2px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: #17150f;
+}
+
+body {
+  font-family: var(--font-serif);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.85;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ---------- 背景画布 ---------- */
+#sky {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  z-index: 0;
+}
+/* 宣纸纹理罩层 */
+#grain {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none;
+  opacity: .5;
+  background-image:
+    radial-gradient(circle at 12% 22%, rgba(255, 250, 235, .30), transparent 42%),
+    radial-gradient(circle at 82% 76%, rgba(120, 100, 70, .16), transparent 46%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.38'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+#vign {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 42%, transparent 45%, rgba(30, 24, 14, .34) 100%);
+}
+/* 特效画布（灵气、雷劫） */
+#fx {
+  position: fixed; inset: 0; z-index: 40; pointer-events: none;
+  width: 100%; height: 100%;
+}
+
+/* ---------- 字体基调 ---------- */
+h1, h2, h3, h4 { font-weight: 600; line-height: 1.5; }
+b, strong { font-weight: 600; }
+em { font-style: normal; }
+a { color: var(--zhu); text-decoration: none; }
+button { font-family: inherit; font-size: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+input, select, textarea { font-family: inherit; font-size: inherit; }
+
+.t-kai { font-family: var(--font-kai); }
+.t-hei { font-family: var(--font-hei); }
+.dim { color: var(--dim); }
+.small { font-size: 12.5px; line-height: 1.7; }
+.tiny { font-size: 11.5px; line-height: 1.6; }
+.center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.mono-num { font-variant-numeric: tabular-nums; }
+
+/* 竖排标题 */
+.vtitle {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: .34em;
+  font-size: 15px;
+  color: var(--ink-3);
+}
+
+/* 效果着色 */
+.e-good { color: var(--good); }
+.e-bad { color: var(--bad); }
+.e-gold { color: #8a6a24; font-weight: 600; }
+.e-dim { color: var(--dim); }
+.e-yang { color: #b4622d; }
+.e-yin { color: #3f6b8e; }
+.el-jin { color: #7f867f; }
+.el-mu { color: #3f7a52; }
+.el-shui { color: #35688f; }
+.el-huo { color: #b0452e; }
+.el-tu { color: #8b6a2e; }
+.el-none { color: var(--ink-3); }
+.soul { color: #7a5f9e; }
+.dmg { color: var(--zhu); }
+.crit { color: #c8102e; }
+.adv { color: var(--good); font-size: 12px; }
+.dis { color: var(--bad); font-size: 12px; }
+
+/* 印章 */
+.seal {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #ba2f24, #8e1f18);
+  color: #f6ece0;
+  font-family: var(--font-serif);
+  letter-spacing: .12em;
+  padding: 2px 7px 3px;
+  border-radius: 2px;
+  font-size: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 235, 220, .28), 0 1px 3px rgba(80, 20, 12, .4);
+  text-shadow: 0 1px 0 rgba(90, 20, 12, .5);
+}
+.seal.gold { background: linear-gradient(160deg, #c2a05a, #94742f); color: #fff8e6; }
+.seal.ink { background: linear-gradient(160deg, #3b352c, #201d17); color: #ded6c4; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(28, 26, 22, .05); }
+::-webkit-scrollbar-thumb { background: rgba(28, 26, 22, .26); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(28, 26, 22, .42); }
+
+/* 选择 */
+::selection { background: rgba(168, 38, 31, .22); }
+
+/* 笔触分隔 */
+.brush-hr {
+  height: 10px; margin: 10px 0;
+  background: no-repeat center/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 10' preserveAspectRatio='none'%3E%3Cpath d='M2 6 C 40 2, 70 8, 110 5 S 190 2, 230 6 S 280 4, 298 5' fill='none' stroke='%231c1a16' stroke-opacity='.30' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  opacity: .8;
+}
+
+/* 通用动画 */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop { 0% { transform: scale(.94); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+@keyframes breathe { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes floatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes shake { 10%,90% { transform: translateX(-1px); } 20%,80% { transform: translateX(2px); } 30%,50%,70% { transform: translateX(-4px); } 40%,60% { transform: translateX(4px); } }
+@keyframes glowPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(224,189,118,0); } 50% { box-shadow: 0 0 18px 2px rgba(224,189,118,.55); } }
+@keyframes flowDash { to { stroke-dashoffset: -1000; } }
+
+.anim-in { animation: fadeUp .34s ease both; }
+.anim-pop { animation: pop .26s cubic-bezier(.2,.9,.3,1.2) both; }
+.shake { animation: shake .5s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

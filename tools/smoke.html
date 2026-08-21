@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<title>smoke</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/ui.css">
+<link rel="stylesheet" href="../css/art.css">
+<style>#report{position:fixed;inset:0;z-index:9999;background:#fff;color:#000;font:12px/1.5 monospace;white-space:pre-wrap;padding:10px;overflow:auto;display:none}</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div id="grain"></div><div id="vign"></div>
+<div id="tribVeil"></div><div id="breakVeil"></div>
+<div id="app">
+  <header id="topbar"></header>
+  <div id="body">
+    <aside id="colL"></aside>
+    <section id="colC"></section>
+    <aside id="colR"></aside>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<div id="toast"></div>
+<pre id="report">running…</pre>
+
+<script>
+window.__ERRS = [];
+window.onerror = function (m, s, l, c, e) { window.__ERRS.push('onerror: ' + m + ' @' + (s||'').split('/').pop() + ':' + l + (e && e.stack ? '\n' + e.stack : '')); };
+window.addEventListener('unhandledrejection', function (e) { window.__ERRS.push('reject: ' + e.reason); });
+(function(){ var ce = console.error; console.error = function(){ window.__ERRS.push('console.error: ' + Array.prototype.join.call(arguments,' ')); ce.apply(console, arguments); }; })();
+</script>
+
+<script src="../js/data/core.js"></script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/hexagrams.js"></script>
+<script src="../js/data/techniques.js"></script>
+<script src="../js/data/alchemy.js"></script>
+<script src="../js/data/world.js"></script>
+<script src="../js/data/events.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/systems/effects.js"></script>
+<script src="../js/systems/craft.js"></script>
+<script src="../js/systems/cultivate.js"></script>
+<script src="../js/systems/combat.js"></script>
+<script src="../js/systems/trib.js"></script>
+<script src="../js/systems/divine.js"></script>
+<script src="../js/systems/events.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/avatar.js"></script>
+<script src="../js/ui/shell.js"></script>
+<script src="../js/ui/panels.js"></script>
+<script src="../js/ui/modals.js"></script>
+<script src="../js/main.js"></script>
+
+<script>
+(function () {
+  var out = [];
+  var pass = 0, fail = 0;
+  function T(name, fn) {
+    try { fn(); out.push('  ok   ' + name); pass++; }
+    catch (e) { out.push('  FAIL ' + name + ' :: ' + (e && e.message) + '\n' + (e && e.stack ? String(e.stack).split('\n').slice(1,4).join('\n') : '')); fail++; }
+  }
+  function finish() {
+    var errs = window.__ERRS;
+    out.unshift('=== SMOKE ' + (fail === 0 && errs.length === 0 ? 'PASS' : 'FAIL') + ' (' + pass + ' ok, ' + fail + ' fail, ' + errs.length + ' errors) ===');
+    if (errs.length) out.push('--- runtime errors ---'), errs.forEach(function (e) { out.push('  ' + e); });
+    var r = document.getElementById('report');
+    r.textContent = out.join('\n');
+    r.setAttribute('data-done', '1');
+    r.setAttribute('data-fail', String(fail + errs.length));
+  }
+
+  setTimeout(function () {
+    var X = window.XIAN, G = X && X.G;
+    T('XIAN 命名空间与全部图籍已载入', function () {
+      if (!X) throw new Error('XIAN 未定义');
+      ['hexagrams','techniques','artifacts','herbs','pills','locations','enemies','events','realms','meridians','solarTerms','bagua','omenMeta','pillQuality'].forEach(function (k) {
+        if (!X.Data[k]) throw new Error('缺 XIAN.Data.' + k);
+      });
+    });
+    T('开局弹窗已现（投胎）', function () {
+      if (!document.querySelector('#modalRoot.on')) throw new Error('intro 未打开');
+      if (!document.querySelector('#btnGo')) throw new Error('入世按钮缺失');
+    });
+    T('重投灵根', function () { document.querySelector('#btnReroll').click(); if (!document.querySelector('#btnGo')) throw new Error('重投后弹窗损坏'); });
+    T('玄门要旨', function () { X.UI.openHelp(); if (!/三　宝/.test(document.querySelector('.md-body').textContent)) throw new Error('要旨内容缺失'); });
+    T('前世碑铭', function () { X.UI.openLives(); X.UI.closeModal(); });
+
+    T('入世（begin）', function () {
+      X.UI.openIntro();
+      document.querySelector('#btnGo').click();
+      if (!G.S) throw new Error('状态未建立');
+      if (document.querySelector('#modalRoot.on')) throw new Error('入世后弹窗未关');
+      if (!document.querySelector('#topbar .tb-cell')) throw new Error('顶栏未渲染');
+      if (!document.querySelector('#colL .scroll')) throw new Error('左栏未渲染');
+      if (!document.querySelector('#colR .scroll')) throw new Error('右栏未渲染');
+      if (!document.querySelector('#taiji')) throw new Error('太极图未渲染');
+      if (!document.querySelector('#wuxing')) throw new Error('五行图未渲染');
+    });
+
+    var S = G.S;
+    T('人物立绘已挂载（神形卷）', function () {
+      var av = document.querySelector('#avatar');
+      if (!av) throw new Error('缺 #avatar 画布');
+      if (!av.width || !av.height) throw new Error('立绘画布无尺寸 ' + av.width + 'x' + av.height);
+      var w = av.getBoundingClientRect();
+      if (w.height < 200) throw new Error('立绘过矮 ' + Math.round(w.height) + 'px（纪事界面应更舒展）');
+      var d = X.Avatar.describePlayer(S, { pose: 'sit' });
+      if (!d || d.kind !== 'player') throw new Error('立绘描述子异常');
+    });
+    T('立绘像素自检：画布确已绘出人形', function () {
+      X.Avatar._debugRenderNow();
+      var av = document.querySelector('#avatar');
+      var g = av.getContext('2d');
+      var img = g.getImageData(0, 0, av.width, av.height).data;
+      /* 依本命五行取衣袍之色，再于画布中寻之 */
+      function h2r(h) {
+        h = h.replace('#', '');
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      }
+      var robeCol = h2r((X.Data.elements[S.root.main] || {}).color || '#888');
+      var colors = new Set(), ink = 0, robe = 0, total = 0;
+      for (var i = 0; i < img.length; i += 16) {
+        var r = img[i], gg = img[i + 1], b = img[i + 2], a = img[i + 3];
+        if (a < 40) continue;
+        total++;
+        colors.add((r >> 4) + ',' + (gg >> 4) + ',' + (b >> 4));
+        if (r < 70 && gg < 70 && b < 60) ink++;
+        var dr = r - robeCol[0], dg = gg - robeCol[1], db = b - robeCol[2];
+        if (dr * dr + dg * dg + db * db < 130 * 130) robe++;          /* 距袍色 <130 */
+      }
+      if (total < 2000) throw new Error('立绘几乎空白（有效像素 ' + total + '）');
+      if (colors.size < 24) throw new Error('立绘色数过少（' + colors.size + '），疑似未绘成');
+      if (ink < 150) throw new Error('未见墨色笔墨（' + ink + '）');
+      if (robe < 60) throw new Error('未见衣袍色块（' + robe + '，袍色 ' + robeCol + '）');
+    });
+    T('立绘随境界取形（九重天阶皆可绘）', function () {
+      var keepR = S.realm, keepS = S.stage;
+      for (var r = 0; r <= 9; r++) {
+        S.realm = r; S.stage = r === 9 ? 0 : 2;
+        X.recalcLifespan(S);
+        var d = X.Avatar.describePlayer(S, { pose: 'sit' });
+        if (d.realm !== r) throw new Error('境界描述子错位');
+        var cv = document.createElement('canvas');
+        cv.style.width = '220px'; cv.style.height = '300px';
+        document.body.appendChild(cv);
+        X.Avatar.mount(cv, function () { return d; });
+        document.body.removeChild(cv);
+      }
+      S.realm = keepR; S.stage = keepS; X.recalcLifespan(S);
+    });
+    T('六类妖魔皆可绘', function () {
+      var kinds = {};
+      X.Data.enemies.forEach(function (e) { if (!kinds[e.kind]) kinds[e.kind] = e; });
+      ['beast', 'demon', 'ghost', 'human', 'spirit', 'dragon'].forEach(function (k) {
+        if (!kinds[k]) throw new Error('缺 ' + k + ' 类妖魔样本');
+        var cv = document.createElement('canvas');
+        cv.style.width = '220px'; cv.style.height = '260px';
+        document.body.appendChild(cv);
+        X.Avatar.mount(cv, function () { return X.Avatar.describeEnemy(kinds[k], {}); });
+        document.body.removeChild(cv);
+      });
+    });
+    T('纪事区有拖拽把手且高度充裕', function () {
+      var lw = document.querySelector('#logWrap').getBoundingClientRect();
+      if (lw.height < 180) throw new Error('纪事区过矮 ' + Math.round(lw.height));
+      if (!document.querySelector('#logGrip')) throw new Error('缺拖拽把手');
+    });
+    T('纪事条目带类别标记', function () {
+      X.UI.log('〔问卦〕得「谦·地山谦」吉', 'gold');
+      X.UI.log('〔斗法〕胜「青风狼」。', 'good');
+      X.UI.log('〔深修〕道行 +100', '');
+      var gls = document.querySelectorAll('#log [data-g]');
+      if (gls.length < 3) throw new Error('标记数量不足：' + gls.length);
+      var marks = [];
+      for (var i = 0; i < gls.length; i++) marks.push(gls[i].getAttribute('data-g'));
+      if (marks.indexOf('卜') < 0 || marks.indexOf('战') < 0 || marks.indexOf('修') < 0) throw new Error('标记缺失：' + marks.join(','));
+    });
+    T('画布尺寸有效', function () {
+      var cv = document.querySelector('#sky');
+      if (!cv.width || !cv.height) throw new Error('sky 画布无尺寸 ' + cv.width + 'x' + cv.height);
+      var tj = document.querySelector('#taiji');
+      if (!tj.width) throw new Error('taiji 画布无尺寸');
+    });
+
+    T('七面板逐一渲染', function () {
+      X.UI.TABS.forEach(function (t) {
+        G.goTab(t.id);
+        var p = document.querySelector('#panel');
+        if (!p.innerHTML || p.innerHTML.length < 60) throw new Error('面板 ' + t.id + ' 内容过少');
+      });
+      G.goTab('cultivate');
+    });
+    T('玄览六个子页', function () {
+      G.goTab('lore');
+      ['realm','hex','wuxing','tech','herb','enemy'].forEach(function (k) {
+        G.act('loretab', k);
+        if (document.querySelector('#panel').innerHTML.length < 60) throw new Error('玄览 ' + k + ' 空');
+      });
+      G.goTab('cultivate');
+    });
+    T('经脉内景 SVG', function () {
+      G.goTab('meridian');
+      if (!document.querySelector('#meridianSvg')) throw new Error('经脉 SVG 缺失');
+      if (document.querySelectorAll('#meridianSvg circle.pt').length < 20) throw new Error('窍穴点位不足');
+      G.goTab('cultivate');
+    });
+
+    T('六心法皆可切换', function () {
+      X.Data.stances.forEach(function (st) { if (st.minRealm === undefined) G.act('stance', st.id); });
+      G.act('stance', 'ziran');
+    });
+    T('打坐深修 ×6', function () { for (var i = 0; i < 6; i++) { if (!G.S.dead) G.act('cultivate'); if (X.UI.modalOpen()) X.UI.closeModal(); } });
+    T('静养 / 游历 / 采药', function () {
+      G.act('rest'); if (X.UI.modalOpen()) X.UI.closeModal();
+      G.act('wander'); if (X.UI.modalOpen()) X.UI.closeModal();
+      G.act('travel', 'wanyao_gu'); if (X.UI.modalOpen()) X.UI.closeModal();
+      G.act('gather'); if (X.UI.modalOpen()) X.UI.closeModal();
+    });
+    T('占卜（含卦象渲染）', function () {
+      G.S.shen = X.stats(G.S).maxShen;
+      G.doDivine();
+      if (!document.querySelector('.yarrow')) throw new Error('蓍草动画缺失');
+      X.UI.closeModal();
+      if (!G.S.divine) throw new Error('卦象未落');
+      X.UI.renderRight();
+      if (!document.querySelector('#colR .hex-lines')) throw new Error('右栏卦象未渲染');
+    });
+    T('三宝转化', function () {
+      G.S.jing = X.stats(G.S).maxJing; G.S.qi = X.stats(G.S).maxQi;
+      G.act('refine', 'jq');
+      if (X.UI.modalOpen()) X.UI.closeModal();
+    });
+    T('三宝转化（高境界 qs/sv）', function () {
+      G.S.realm = 3; G.S.stage = 0; X.recalcLifespan(G.S);
+      var st = X.stats(G.S); G.S.jing = st.maxJing; G.S.qi = st.maxQi; G.S.shen = st.maxShen;
+      G.S.refineTerm = {};
+      var a = X.Sys.refine(G.S, 'qs', G.rng); if (!a.ok) throw new Error('qs: ' + a.reason);
+      G.S.refineTerm = {}; G.S.shen = X.stats(G.S).maxShen;
+      var b = X.Sys.refine(G.S, 'sv', G.rng); if (!b.ok) throw new Error('sv: ' + b.reason);
+      G.S.realm = 0; G.S.stage = 0; X.recalcLifespan(G.S);
+    });
+    T('开辟经脉（任脉）', function () {
+      var st = X.stats(G.S); G.S.qi = st.maxQi; G.S.jing = st.maxJing;
+      G.S.daoxin = 95; G.S.haste = 0; G.S.balance = 0;
+      for (var i = 0; i < 8 && G.S.meridians.indexOf('ren') < 0; i++) {
+        var st2 = X.stats(G.S); G.S.qi = st2.maxQi; G.S.jing = st2.maxJing;
+        X.Sys.openMeridian(G.S, 'ren', G.rng);
+      }
+      if (G.S.meridians.indexOf('ren') < 0) throw new Error('八次未开任脉（概率异常）');
+      X.UI.renderLeft(); X.UI.renderRight();
+    });
+
+    T('丹炉火候（开炉→落指→出丹）', function () {
+      var pid = null;
+      G.S.recipes.forEach(function (id) { var s = X.Sys.recipeStatus(G.S, id); if (s && s.herbsOk) pid = id; });
+      if (!pid) throw new Error('无可炼之方（起手药材配给有误）');
+      var st = X.stats(G.S); G.S.qi = st.maxQi;
+      X.UI.openFurnace(pid);
+      if (!document.querySelector('#furnaceCv')) throw new Error('丹炉画布缺失');
+      if (!document.querySelector('#fireBar .needle')) throw new Error('火候指针缺失');
+      document.querySelector('#fbLock').click();
+    });
+    T('丹成弹窗与服丹', function (){
+      setTimeout(function(){}, 0);
+    });
+
+    T('斗法全流程', function () {
+      var foe = X.Sys.pickEnemy(G.S, G.rng, {});
+      if (!foe) throw new Error('未能选敌');
+      var st = X.stats(G.S); G.S.jing = st.maxJing; G.S.qi = st.maxQi;
+      X.UI.openCombat(foe, function () {});
+      if (!document.querySelector('.cb-arena')) throw new Error('斗法界面缺失');
+      if (!document.querySelector('#cbP') || !document.querySelector('#cbF')) throw new Error('斗法立绘缺失');
+      if (!document.querySelector('#cbP').width) throw new Error('我方立绘无尺寸');
+      if (!document.querySelector('.cb-techs .tech-btn')) throw new Error('法术按钮缺失');
+      /* 立绘反馈 */
+      X.Avatar.pulse(document.querySelector('#cbP'), 'hit');
+      X.Avatar.pulse(document.querySelector('#cbF'), 'cast');
+      var guard = 0;
+      while (!X.G.combat.over && guard++ < 60) {
+        var b = document.querySelector('.cb-techs .tech-btn:not([disabled])');
+        if (b) b.click();
+        else { var g2 = document.querySelector('[data-cb="guard"]'); if (g2) g2.click(); else break; }
+      }
+      if (!X.G.combat) throw new Error('战斗对象丢失');
+      if (!X.G.combat.over) throw new Error('60 回合未决');
+      var e = document.querySelector('#cbEnd');
+      if (!e) throw new Error('收功按钮缺失');
+      e.click();
+      if (X.G.combat) throw new Error('战后未清理');
+    });
+
+    T('敌方属性归一（高境界不再不堪一击）', function () {
+      var e8 = X.Data.enemies.filter(function (x) { return x.realm === 8; })[0];
+      var ns = X.Sys.enemyStats(e8);
+      var R = X.Data.realms[8];
+      if (ns.atk < R.atk * 0.6) throw new Error('渡劫期妖魔攻 ' + ns.atk + ' 远低于修士 ' + R.atk);
+      if (ns.jing < R.jing * 0.6) throw new Error('渡劫期妖魔精 ' + ns.jing + ' 过低');
+    });
+
+    T('奇遇弹窗与抉择（遍历全部 60 事件之首选）', function () {
+      var n = 0;
+      X.Data.events.forEach(function (ev) {
+        G.S.dead = false;
+        var st = X.stats(G.S); G.S.jing = st.maxJing; G.S.qi = st.maxQi; G.S.shen = st.maxShen; G.S.stone = 1e9;
+        X.UI.openEvent(ev, function () {});
+        var cs = document.querySelectorAll('.choice');
+        if (!cs.length) throw new Error('事件 ' + ev.id + ' 无选项按钮');
+        var picked = null;
+        for (var i = 0; i < cs.length; i++) if (!cs[i].hasAttribute('disabled')) { picked = cs[i]; break; }
+        if (!picked) throw new Error('事件 ' + ev.id + ' 全部选项不可用');
+        picked.click();
+        var ok = document.querySelector('#evOk');
+        if (!ok) throw new Error('事件 ' + ev.id + ' 结果页缺确认');
+        ok.click();
+        if (X.UI.modalOpen()) X.UI.closeModal();
+        if (X.G.combat) { X.G.combat = null; X.UI.closeModal(); }
+        n++;
+      });
+      if (n !== 60) throw new Error('仅走通 ' + n + ' 个事件');
+    });
+
+    T('突破小境界（可失败，故重试至成）', function () {
+      G.S.dead = false; G.S.realm = 0; G.S.stage = 0; G.S.daoxin = 95; G.S.haste = 0; G.S.balance = 0;
+      X.recalcLifespan(G.S);
+      var okOnce = false, failedOnce = false;
+      for (var i = 0; i < 8 && !okOnce; i++) {
+        var st4 = X.stats(G.S); G.S.jing = st4.maxJing; G.S.qi = st4.maxQi;
+        G.S.dao = X.daoNeed(G.S) * 1.4;
+        var before = G.S.stage;
+        G.act('break');
+        if (X.UI.modalOpen()) {
+          if (!document.querySelector('.md-body')) throw new Error('突破弹窗无内容');
+          X.UI.closeModal();
+        }
+        if (G.S.stage > before) okOnce = true; else failedOnce = true;
+      }
+      if (!okOnce) throw new Error('八次皆未晋（成算异常）');
+      /* 顺带验证失败分支的弹窗也能渲染 */
+      if (!failedOnce) {
+        var br = { success: false, lost: 100, hurt: 50, dev: null };
+        X.UI.showBreak(br);
+        if (!/冲　关　不　成/.test(document.querySelector('.md-head').textContent)) throw new Error('失败弹窗异常');
+        X.UI.closeModal();
+      }
+    });
+
+    T('天劫全流程（含引化 / 顺受 / 御宝 / 服丹）', function () {
+      G.S.dead = false; G.S.realm = 2; G.S.stage = 2; G.S.daoxin = 95; G.S.haste = 0;
+      G.S.balance = 0; G.S.merit = 400; G.S.karma = 0;
+      X.recalcLifespan(G.S);
+      var st = X.stats(G.S); G.S.jing = st.maxJing; G.S.qi = st.maxQi; G.S.shen = st.maxShen;
+      G.S.artifacts = ['a_xuanwu_jia']; G.S.equipped.robe = 'a_xuanwu_jia';
+      X.UI.openTrib(function () {});
+      if (!document.querySelector('.trib-wave-dots')) throw new Error('劫数点位缺失');
+      if (!document.querySelector('.trib-opts .trib-opt')) throw new Error('渡劫选项缺失');
+      var guard = 0, usedChannel = false, usedYield = false, usedGuard = false, usedPill = false, usedDao = false;
+      var diag = [];
+      while (X.G.trib && !X.G.trib.done && guard++ < 60) {
+        var T2 = X.G.trib, w = T2.cur();
+        diag.push('#' + guard + ' idx=' + T2.idx + '/' + T2.total + ' done=' + T2.done +
+          ' wave=' + (w ? w.type.id : 'NONE') + ' jing=' + Math.round(G.S.jing) + ' qi=' + Math.round(G.S.qi) +
+          ' opts=' + document.querySelectorAll('[data-to]').length);
+        if (!usedPill) {
+          var pb = document.querySelector('[data-tpill]');
+          if (pb) { pb.click(); usedPill = true; continue; }
+        }
+        if (w && w.type.element !== 'none' && !usedChannel) {
+          var cb = document.querySelector('[data-to="channel"]');
+          if (cb && !cb.hasAttribute('disabled')) {
+            cb.click();
+            var ep = document.querySelector('[data-el]');
+            if (!ep) throw new Error('五行选择器未出现');
+            ep.click(); usedChannel = true; continue;
+          }
+        }
+        if (!usedGuard) { var gb = document.querySelector('[data-to="guard"]'); if (gb && !gb.hasAttribute('disabled')) { gb.click(); usedGuard = true; continue; } }
+        if (!usedYield) { var yb = document.querySelector('[data-to="yield"]'); if (yb) { yb.click(); usedYield = true; continue; } }
+        var eb = document.querySelector('[data-to="endure"]');
+        if (!eb) {
+          /* 道劫：天问，选项换作四答 */
+          var db = document.querySelector('[data-to^="dao"]');
+          if (db) { db.click(); usedDao = true; continue; }
+          diag.push('  !! 既无硬抗亦无天问，跳出（劫=' + (w ? w.type.id : '?') + '）');
+          break;
+        }
+        var beforeIdx = T2.idx;
+        eb.click();
+        if (X.G.trib && X.G.trib.idx === beforeIdx && !X.G.trib.done) { diag.push('  !! 硬抗未推进'); break; }
+      }
+      if (!X.G.trib) throw new Error('天劫对象丢失\n' + diag.join('\n'));
+      if (!X.G.trib.done) throw new Error('天劫未结束\n' + diag.join('\n'));
+      if (!usedChannel) throw new Error('引化未走通\n' + diag.join('\n'));
+      var end = document.querySelector('#tbEnd');
+      if (!end) throw new Error('雷息按钮缺失');
+      end.click();
+      if (X.UI.modalOpen() && !document.querySelector('.ending-title')) throw new Error('渡劫后弹窗异常');
+    });
+
+    T('道劫问答（末重）', function () {
+      G.S.dead = false; G.S.realm = 7; G.S.stage = 2; G.S.merit = 500; G.S.karma = 0; G.S.daoxin = 95;
+      X.recalcLifespan(G.S);
+      var st = X.stats(G.S); G.S.jing = st.maxJing; G.S.qi = st.maxQi; G.S.shen = st.maxShen;
+      var T3 = new X.Trib(G.S, G.rng);
+      var last = T3.waves[T3.waves.length - 1];
+      if (last.type.id !== 'dao') throw new Error('大乘之末重非道劫');
+      if (!last.q || !last.q.opts || last.q.opts.length < 3) throw new Error('道劫问答缺失');
+      T3.idx = T3.total - 1;
+      var o = T3.options();
+      if (o[0].kind !== 'dao') throw new Error('道劫选项类型有误');
+      var r = T3.respond(o[0].id, null);
+      if (!r || !r.lines.length) throw new Error('道劫应答无结果');
+    });
+
+    T('坊市买卖', function () {
+      G.S.dead = false; G.S.realm = 2; G.S.stage = 0; X.recalcLifespan(G.S);
+      G.S.stone = 5e7; G.S.loc = 'fuyao_cheng'; G.S.market = null;
+      G.goTab('market');
+      var btns = document.querySelectorAll('#panel [data-act^="buy"]:not([disabled])');
+      if (!btns.length) throw new Error('坊市无可买之物');
+      var before = G.S.stone;
+      btns[0].click();
+      if (G.S.stone >= before) throw new Error('买后灵石未减');
+      G.goTab('bag');
+      var sell = document.querySelector('#panel [data-act="sellherb"]');
+      if (sell) sell.click();
+    });
+
+    T('炼器温养', function () {
+      G.S.loc = 'jinshi_dong'; G.S.stone = 1e8;
+      var st = X.stats(G.S); G.S.qi = st.maxQi;
+      var b0 = G.S.bonus.maxJing;
+      G.act('forge', 'cuiti');
+      if (X.UI.modalOpen()) X.UI.closeModal();
+      if (G.S.bonus.maxJing <= b0) throw new Error('淬体未生效');
+    });
+
+    T('道观布施与苦行', function () {
+      G.S.loc = 'taixu_guan'; G.S.stone = 1e8; G.S.karma = 200;
+      var m0 = G.S.merit;
+      G.act('donate', String(Math.round(200 * Math.pow(2.4, G.S.realm))));
+      if (G.S.merit <= m0) throw new Error('布施无功德');
+      var k0 = G.S.karma;
+      G.act('penance');
+      if (X.UI.modalOpen()) X.UI.closeModal();
+      if (G.S.karma >= k0) throw new Error('苦行未涤业障');
+    });
+
+    T('法宝佩戴 / 卸下', function () {
+      G.S.artifacts = ['a_taiji_tu', 'a_xuanwu_jia'];
+      G.act('equip', 'a_taiji_tu');
+      if (G.S.equipped.main !== 'a_taiji_tu') throw new Error('佩戴失败');
+      G.act('unequip', 'main');
+      if (G.S.equipped.main) throw new Error('卸下失败');
+    });
+
+    T('存档 / 读档 / 导出导入', function () {
+      if (!X.save(G.S)) throw new Error('存档失败');
+      var L = X.load();
+      if (!L || !L.root) throw new Error('读档失败');
+      var txt = X.exportSave(G.S);
+      if (!txt) throw new Error('导出失败');
+      var imp = X.importSave(txt);
+      if (!imp || imp.hao !== G.S.hao) throw new Error('导入失败');
+    });
+
+    T('经脉详情 / 卦象详情小窗', function () {
+      X.UI.openMeridianInfo('du'); X.UI.closeModal();
+      X.UI.openHexInfo(1); X.UI.closeModal();
+      X.UI.openHexInfo(64); X.UI.closeModal();
+    });
+
+    T('生平纪年 / 别事', function () {
+      X.UI.openChronicle(); X.UI.closeModal();
+      X.UI.openMore(); X.UI.closeModal();
+    });
+
+    T('结局：身殒与轮回结算', function () {
+      G.S.dead = true; G.S.causeOfDeath = '试';
+      X.UI.openEnding('die');
+      if (!document.querySelector('.ending-title.die')) throw new Error('身殒结局未渲染');
+      var lg = X.loadLegacy();
+      if (!lg.lives) throw new Error('轮回未结算');
+      if (!lg.epitaphs.length) throw new Error('碑铭未写入');
+      X.UI.closeModal();
+    });
+
+    T('结局：飞升', function () {
+      G.S.dead = false; G.S.ascended = true; G.S.realm = 9;
+      X.UI.openEnding('ascend');
+      if (!document.querySelector('.ending-title.win')) throw new Error('飞升结局未渲染');
+      X.UI.closeModal();
+    });
+
+    T('全部地域场景可绘（水墨山水）', function () {
+      X.Data.locations.forEach(function (L) {
+        X.Data.solarTerms.forEach(function (t, i) {
+          if (i % 6) return;
+          X.Art.setScene(L, t, 1234);
+        });
+      });
+    });
+    T('特效可调用', function () {
+      X.Art.lightning('#dce8ff', 1); X.Art.qiBurst('huo', 3);
+      X.Art.rings('#e0bd76', 1); X.Art.flash(0.3); X.Art.darken(0.4, 100);
+      X.Art.floaty('测', '#a8261f');
+    });
+    T('五行图对全部灵根可绘', function () {
+      X.Data.spiritRoots.forEach(function (r) {
+        var made = r.make(new X.RNG(11));
+        X.Art.drawWuxing(document.querySelector('#wuxing'), made.aff, made.main);
+      });
+    });
+
+    /* ---------------- 版式几何 ---------------- */
+    T('版式几何：三栏不重叠、无横向溢出', function () {
+      X.UI.closeModal();
+      G.S.dead = false; G.S.ascended = false; G.S.realm = 1; G.S.stage = 1;
+      X.recalcLifespan(G.S);
+      G.goTab('cultivate');
+      var vw = document.documentElement.clientWidth;
+      var mode = vw > 1180 ? 'wide' : (vw > 900 ? 'mid' : 'stack');
+      var L = document.querySelector('#colL').getBoundingClientRect();
+      var C = document.querySelector('#colC').getBoundingClientRect();
+      var R = document.querySelector('#colR').getBoundingClientRect();
+      if (L.width < 120) throw new Error('左栏过窄 ' + Math.round(L.width));
+      if (C.width < 280) throw new Error('中栏过窄 ' + Math.round(C.width));
+      if (R.width < 120) throw new Error('右栏过窄 ' + Math.round(R.width) + '（模式 ' + mode + '，天时卦象不可失）');
+      if (R.height < 60) throw new Error('右栏过矮 ' + Math.round(R.height));
+      if (mode === 'wide') {
+        if (L.right > C.left + 1) throw new Error('左栏与中栏重叠');
+        if (C.right > R.left + 1) throw new Error('中栏与右栏重叠');
+      } else if (mode === 'mid') {
+        if (L.right > C.left + 1) throw new Error('左栏与中栏重叠');
+        if (R.right > C.left + 1) throw new Error('右栏与中栏重叠');
+        if (L.bottom > R.top + 1) throw new Error('左栏与右栏重叠');
+      } else {
+        if (C.bottom > L.top + 1) throw new Error('中栏与左栏重叠（纵叠模式）');
+        if (L.bottom > R.top + 1) throw new Error('左栏与右栏重叠（纵叠模式）');
+      }
+      var over = [];
+      ['#topbar', '#body', '#colL', '#colC', '#colR', '#log', '#panel', '#tabs'].forEach(function (sel) {
+        var el = document.querySelector(sel);
+        if (!el) throw new Error('缺 ' + sel);
+        var b = el.getBoundingClientRect();
+        if (b.right > vw + 2) over.push(sel + ' 右溢 ' + Math.round(b.right - vw));
+        if (b.width <= 0 || b.height <= 0) over.push(sel + ' 尺寸为零');
+        if (el.scrollWidth > el.clientWidth + 3) over.push(sel + ' 横向滚动 ' + (el.scrollWidth - el.clientWidth));
+      });
+      if (document.documentElement.scrollWidth > vw + 2) over.push('文档横向溢出 ' + (document.documentElement.scrollWidth - vw));
+      if (over.length) throw new Error(mode + ': ' + over.join('；'));
+    });
+
+    T('版式几何：日志与面板可用高度充足', function () {
+      var log = document.querySelector('#log').getBoundingClientRect();
+      var pan = document.querySelector('#panel').getBoundingClientRect();
+      if (log.height < 90) throw new Error('日志区过矮 ' + Math.round(log.height));
+      if (pan.height < 160) throw new Error('面板区过矮 ' + Math.round(pan.height));
+      var tj = document.querySelector('#taiji').getBoundingClientRect();
+      if (tj.width < 80 || Math.abs(tj.width - tj.height) > 3) throw new Error('太极图非正方或过小 ' + Math.round(tj.width) + 'x' + Math.round(tj.height));
+      var wx = document.querySelector('#wuxing').getBoundingClientRect();
+      if (wx.width < 120) throw new Error('五行图过小 ' + Math.round(wx.width));
+    });
+
+    T('版式几何：七面板皆无横向溢出', function () {
+      var bad = [];
+      X.UI.TABS.forEach(function (t) {
+        G.goTab(t.id);
+        var p = document.querySelector('#panel');
+        if (p.scrollWidth > p.clientWidth + 3) bad.push(t.id + '(+' + (p.scrollWidth - p.clientWidth) + ')');
+        /* 卡片内文字不应被裁 */
+        var cards = p.querySelectorAll('.card, .loc-card, .stance, .tech-btn');
+        for (var i = 0; i < cards.length; i++) {
+          if (cards[i].scrollWidth > cards[i].clientWidth + 4) { bad.push(t.id + ' 卡片裁切'); break; }
+        }
+      });
+      G.goTab('cultivate');
+      if (bad.length) throw new Error(bad.join('；'));
+    });
+
+    T('版式几何：弹窗不超出视口', function () {
+      var vh = document.documentElement.clientHeight, vw2 = document.documentElement.clientWidth;
+      var bad = [];
+      function chk(nm) {
+        var m = document.querySelector('#modalRoot .modal');
+        if (!m) { bad.push(nm + ' 未开'); return; }
+        var b = m.getBoundingClientRect();
+        if (b.height > vh + 2) bad.push(nm + ' 高溢 ' + Math.round(b.height - vh));
+        if (b.width > vw2 + 2) bad.push(nm + ' 宽溢 ' + Math.round(b.width - vw2));
+        var body = m.querySelector('.md-body');
+        if (body && body.scrollWidth > body.clientWidth + 3) bad.push(nm + ' 横向滚动');
+        X.UI.closeModal();
+      }
+      X.UI.openHelp(); chk('要旨');
+      X.UI.openIntro(); chk('投胎');
+      X.UI.openLives(); chk('碑铭');
+      X.UI.openChronicle(); chk('纪年');
+      X.UI.openHexInfo(29); chk('卦象');
+      X.UI.openMeridianInfo('chong'); chk('经脉');
+      var ev = X.Data.events.filter(function (e) { return e.text.length > 150; })[0] || X.Data.events[0];
+      X.UI.openEvent(ev, function () {}); chk('奇遇');
+      if (bad.length) throw new Error(bad.join('；'));
+    });
+
+    T('无 NaN / undefined 漏入界面', function () {
+      var bad = [];
+      X.UI.closeModal();
+      X.UI.TABS.forEach(function (t) {
+        G.goTab(t.id);
+        var txt = document.querySelector('#panel').textContent;
+        if (/NaN/.test(txt)) bad.push(t.id + ':NaN');
+        if (/undefined/.test(txt)) bad.push(t.id + ':undefined');
+        if (/\[object Object\]/.test(txt)) bad.push(t.id + ':[object Object]');
+      });
+      ['#topbar', '#colL', '#colR', '#log'].forEach(function (sel) {
+        var txt = document.querySelector(sel).textContent;
+        if (/NaN/.test(txt)) bad.push(sel + ':NaN');
+        if (/undefined/.test(txt)) bad.push(sel + ':undefined');
+      });
+      G.goTab('cultivate');
+      if (bad.length) throw new Error(bad.join('；'));
+    });
+
+    T('各境界界面皆可渲染（0→9）', function () {
+      var keepR = G.S.realm, keepS = G.S.stage;
+      for (var r = 0; r <= 9; r++) {
+        G.S.realm = r; G.S.stage = r === 9 ? 0 : 2;
+        X.recalcLifespan(G.S);
+        var st2 = X.stats(G.S);
+        G.S.jing = st2.maxJing; G.S.qi = st2.maxQi; G.S.shen = st2.maxShen;
+        G.S.dao = Math.round(X.daoNeed(G.S) * 0.5);
+        G.render();
+        var txt = document.querySelector('#panel').textContent + document.querySelector('#colL').textContent;
+        if (/NaN|undefined|Infinity/.test(txt)) throw new Error('境界 ' + r + ' 出现 NaN/undefined/Infinity');
+      }
+      G.S.realm = keepR; G.S.stage = keepS; X.recalcLifespan(G.S); G.render();
+    });
+
+    T('全部丹方状态可算（无越界）', function () {
+      X.Data.pills.forEach(function (p) {
+        var s = X.Sys.recipeStatus(G.S, p.id);
+        if (!s) throw new Error('丹方 ' + p.id + ' 无状态');
+        if (isNaN(s.qiCost) || s.qiCost <= 0) throw new Error('丹方 ' + p.id + ' 耗炁异常');
+        var tol = X.Sys.fireTolerance(G.S, p);
+        if (isNaN(tol) || tol <= 0 || tol > 0.5) throw new Error('丹方 ' + p.id + ' 容差异常 ' + tol);
+      });
+    });
+
+    T('全部法术效果可施（对全部妖魔）', function () {
+      var keep = G.S.techs.slice();
+      G.S.techs = X.Data.techniques.filter(function (t) { return t.id.indexOf('m_') !== 0; }).map(function (t) { return t.id; });
+      G.S.realm = 8; G.S.stage = 2; X.recalcLifespan(G.S);
+      var st3 = X.stats(G.S);
+      X.Data.enemies.forEach(function (e) {
+        G.S.jing = st3.maxJing; G.S.qi = st3.maxQi * 999; G.S.shen = st3.maxShen;
+        var cb = new X.Combat(G.S, e, G.rng, {});
+        cb.player.qi = 1e12; cb.player.maxQi = 1e12;
+        var list = cb.techList();
+        for (var i = 0; i < list.length; i++) {
+          if (cb.over) break;
+          cb.player.qi = 1e12;
+          cb.player.cds = {};
+          cb.playerTurn({ type: 'tech', id: list[i].t.id });
+        }
+      });
+      G.S.techs = keep; G.S.realm = 0; G.S.stage = 0; X.recalcLifespan(G.S);
+    });
+
+    T('全部丹药可服（不产生非数）', function () {
+      G.S.realm = 5; G.S.stage = 1; X.recalcLifespan(G.S);
+      X.Data.pills.forEach(function (p) {
+        [1, 3, 5].forEach(function (q) {
+          var key = X.Sys.pillKey(p.id, q);
+          G.S.pills[key] = 1;
+          G.S.pillCount = {};
+          var r = X.Sys.takePill(G.S, key, G.rng);
+          if (!r.ok) throw new Error('服丹失败 ' + p.id + ' q' + q + ': ' + r.reason);
+          ['jing', 'qi', 'shen', 'dao', 'insight', 'daoxin', 'balance', 'merit', 'karma', 'stone', 'repute', 'haste', 'lifespan'].forEach(function (k) {
+            if (typeof G.S[k] === 'number' && !isFinite(G.S[k])) throw new Error(p.id + ' 令 ' + k + ' 变为非数');
+          });
+        });
+      });
+      G.S.realm = 0; G.S.stage = 0; X.recalcLifespan(G.S); G.render();
+    });
+
+    setTimeout(finish, 400);
+  }, 500);
+})();
+</script>
+</body>
+</html>

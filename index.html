@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1c1a16">
+<meta name="description" content="《太乙玄门·修仙模拟器》——以精气神三宝、五行生克、阴阳太极、干支节气、周易六十四卦、经脉窍穴、丹道君臣佐使、功德业障为核心机制的水墨风网页修仙模拟游戏。">
+<title>太乙玄门 · 修仙模拟器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='19' fill='%23e9e3d5'/%3E%3Cpath d='M20 2 a18 18 0 0 1 0 36 a9 9 0 0 1 0 -18 a9 9 0 0 0 0 -18z' fill='%232a251d'/%3E%3Ccircle cx='20' cy='11' r='2.6' fill='%23f2ece0'/%3E%3Ccircle cx='20' cy='29' r='2.6' fill='%232a251d'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/art.css">
+</head>
+<body>
+
+<!-- 水墨山水背景 -->
+<canvas id="sky" aria-hidden="true"></canvas>
+<div id="grain" aria-hidden="true"></div>
+<div id="vign" aria-hidden="true"></div>
+<div id="tribVeil" aria-hidden="true"></div>
+<div id="breakVeil" aria-hidden="true"></div>
+
+<div id="app">
+  <header id="topbar"></header>
+  <div id="body">
+    <aside id="colL"></aside>
+    <section id="colC"></section>
+    <aside id="colR"></aside>
+  </div>
+</div>
+
+<div id="modalRoot" role="dialog" aria-modal="true"></div>
+<div id="toast" aria-live="polite"></div>
+
+<noscript>
+  <div style="padding:40px;font-family:serif;color:#2a251d">
+    <h2>《太乙玄门 · 修仙模拟器》</h2>
+    <p>此界需以 JavaScript 开启。请允许脚本运行。</p>
+  </div>
+</noscript>
+
+<!-- 一、天地根本 -->
+<script src="js/data/core.js"></script>
+<script src="js/core/util.js"></script>
+
+<!-- 二、诸般图籍 -->
+<script src="js/data/hexagrams.js"></script>
+<script src="js/data/techniques.js"></script>
+<script src="js/data/alchemy.js"></script>
+<script src="js/data/world.js"></script>
+<script src="js/data/events.js"></script>
+
+<!-- 三、命簿 -->
+<script src="js/state.js"></script>
+
+<!-- 四、诸法 -->
+<script src="js/systems/effects.js"></script>
+<script src="js/systems/craft.js"></script>
+<script src="js/systems/cultivate.js"></script>
+<script src="js/systems/combat.js"></script>
+<script src="js/systems/trib.js"></script>
+<script src="js/systems/divine.js"></script>
+<script src="js/systems/events.js"></script>
+
+<!-- 五、丹青 -->
+<script src="js/art.js"></script>
+<script src="js/avatar.js"></script>
+
+<!-- 六、外壳 -->
+<script src="js/ui/shell.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/ui/modals.js"></script>
+
+<!-- 七、总纲 -->
+<script src="js/main.js"></script>
+</body>
+</html>

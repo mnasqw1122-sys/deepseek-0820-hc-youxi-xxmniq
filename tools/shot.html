@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>太乙玄门 · 截图</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/ui.css">
+<link rel="stylesheet" href="../css/art.css">
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div id="grain"></div><div id="vign"></div>
+<div id="tribVeil"></div><div id="breakVeil"></div>
+<div id="app">
+  <header id="topbar"></header>
+  <div id="body">
+    <aside id="colL"></aside>
+    <section id="colC"></section>
+    <aside id="colR"></aside>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<div id="toast"></div>
+
+<script src="../js/data/core.js"></script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/hexagrams.js"></script>
+<script src="../js/data/techniques.js"></script>
+<script src="../js/data/alchemy.js"></script>
+<script src="../js/data/world.js"></script>
+<script src="../js/data/events.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/systems/effects.js"></script>
+<script src="../js/systems/craft.js"></script>
+<script src="../js/systems/cultivate.js"></script>
+<script src="../js/systems/combat.js"></script>
+<script src="../js/systems/trib.js"></script>
+<script src="../js/systems/divine.js"></script>
+<script src="../js/systems/events.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/avatar.js"></script>
+<script src="../js/ui/shell.js"></script>
+<script src="../js/ui/panels.js"></script>
+<script src="../js/ui/modals.js"></script>
+<script src="../js/main.js"></script>
+
+<script>
+/* 造一个「中期修士」局面，供截图之用。?v=<场景> */
+(function () {
+  var q = (location.search.match(/v=([a-z0-9_]+)/) || [])[1] || 'desktop';
+  setTimeout(function () {
+    var X = window.XIAN, G = X.G;
+    X.UI.closeModal();
+    try { localStorage.clear(); } catch (e) {}
+    var S = X.newGame({ seed: 20240820, forceRoot: 'san', forceFate: 'ziwei' });
+    S.name = '苏澈之'; S.hao = '守拙道人';
+    S.realm = 3; S.stage = 1; S.age = 214; S.day = Math.round(198 * XIAN.DAYS_PER_YEAR + 15 * 8 + 4);
+    S.loc = 'tianzhu_feng';
+    S.stance = 'fanxu';
+    S.merit = 320; S.karma = 46; S.repute = 88; S.stone = 48200;
+    S.insight = 21; S.daoxin = 78; S.balance = -9; S.haste = 22;
+    S.aff = { jin: 22, mu: 47, shui: 38, huo: 16, tu: 27 };
+    S.meridians = ['ren', 'du', 'fei', 'dachang', 'wei', 'pi', 'xin', 'shen', 'gan', 'dan', 'chong', 'dai'];
+    X.recalcLifespan(S);
+    var st = X.stats(S);
+    S.dao = Math.round(X.daoNeed(S) * 0.63);
+    S.jing = Math.round(st.maxJing * 0.82); S.qi = Math.round(st.maxQi * 0.66); S.shen = Math.round(st.maxShen * 0.55);
+    ['t_qingmu_changsheng', 't_wuwei_zhenjing'].forEach(function (t) { if (!X.byId(X.Data.techniques, t)) return; S.techs.push(t); });
+    X.Data.techniques.filter(function (t) { return t.id.indexOf('m_') !== 0 && t.tier >= 2 && t.tier <= 4; })
+      .slice(0, 7).forEach(function (t) { if (S.techs.indexOf(t.id) < 0) S.techs.push(t.id); });
+    S.artifacts = ['a_qinglong_jiao', 'a_xuanwu_jia', 'a_luoshu_pan'];
+    S.equipped = { main: 'a_qinglong_jiao', robe: 'a_xuanwu_jia', talisman: 'a_luoshu_pan' };
+    X.Data.herbs.slice(0, 9).forEach(function (h) { S.herbs[h.id] = 2 + (h.tier % 4); });
+    X.Data.pills.slice(0, 8).forEach(function (p) { if (S.recipes.indexOf(p.id) < 0) S.recipes.push(p.id); });
+    S.pills[X.Sys.pillKey(X.Data.pills[0].id, 4)] = 3;
+    S.pills[X.Sys.pillKey(X.Data.pills[2].id, 3)] = 2;
+    S.stats.actions = 214; S.stats.cultivations = 121; S.stats.battles = 17; S.stats.wins = 15;
+    S.stats.pillsMade = 34; S.stats.eventsMet = 41; S.stats.tribulations = 2; S.stats.meridiansOpened = 12;
+
+    G.S = S; G.rng = new X.RNG(S.seed); G.tab = 'cultivate';
+    /* 卦象 */
+    var hx = X.Data.hexagrams[14];
+    S.divine = {
+      n: hx.n, name: hx.name, full: hx.full, lines: hx.lines, judgement: hx.judgement,
+      image: hx.image, advice: hx.advice, guide: hx.guide, omen: hx.omen, trueOmen: hx.omen,
+      moving: 4, target: null, term: X.Cal.parse(S.day).termIdx, profane: false
+    };
+    S.log = [];
+    X.UI.log('太　乙　玄　门', 'big');
+    X.UI.log('道生一，一生二，二生三，三生万物。', 'verse');
+    X.UI.log('——第 一 世 · 苏澈之（守拙道人）', 'sep');
+    X.UI.log('天柱峰绝顶。云在脚下，风自颈后过。你已在此坐了三十七年。', 'story');
+    X.UI.log('〔甲戌年 立冬〕返虚深修 1.0 载，道行 <b class="e-gold">+2.14万</b>（×3.61）　阴阳+1.8', '');
+    X.UI.log('〔炼精化炁〕精 -1462　炁 +1319　（1.4 月）', 'good');
+    X.UI.log('返虚之际，忽有所悟。<em class="e-gold">悟性 +1</em>', 'gold');
+    X.UI.log('〔问卦〕得「谦·地山谦」吉　宜自处卑下，忌显露锋芒', 'gold');
+    X.UI.log('〔奇遇〕临渊照心——水中那个人抬起头，与你目光相接。他没有笑。', 'story');
+    X.UI.log('<em class="e-good">道心 +9</em>　<em class="e-good">悟性 +1</em>　<em class="e-bad">神 -1204</em>', '');
+    X.UI.log('任督既通，真炁自尾闾上夹脊，透玉枕，入泥丸，复降丹田——<b>小周天成</b>。', 'big');
+
+    G.render();
+    X.UI.renderLog();
+
+    if (q === 'trib') {
+      S.realm = 4; S.stage = 2; S.merit = 320;
+      var st2 = X.stats(S); S.jing = Math.round(st2.maxJing * 0.62); S.qi = Math.round(st2.maxQi * 0.71);
+      X.UI.openTrib(function () {});
+    } else if (q === 'combat') {
+      var foe = X.byId(X.Data.enemies, X.Data.enemies.filter(function (e) { return e.boss && e.realm <= 4; })[0].id);
+      X.UI.openCombat(foe, function () {});
+      for (var i = 0; i < 3 && X.G.combat && !X.G.combat.over; i++) {
+        var b = document.querySelector('.cb-techs .tech-btn:not([disabled])');
+        if (b) b.click();
+      }
+    } else if (q === 'furnace') {
+      var pid = null;
+      S.recipes.forEach(function (id) { var s = X.Sys.recipeStatus(S, id); if (s && s.herbsOk && s.qiOk) pid = id; });
+      if (pid) X.UI.openFurnace(pid);
+    } else if (q === 'event') {
+      var ev = X.Data.events.filter(function (e) { return e.tag === 'dao'; })[0];
+      X.UI.openEvent(ev, function () {});
+    } else if (q === 'intro') {
+      X.UI.openIntro();
+    } else if (q === 'meridian') {
+      G.goTab('meridian');
+    } else if (q === 'world') {
+      G.goTab('world');
+    } else if (q === 'alchemy') {
+      G.goTab('alchemy');
+    } else if (q === 'lore') {
+      G.goTab('lore'); G.act('loretab', 'hex');
+    } else if (q === 'help') {
+      X.UI.openHelp();
+    }
+    document.title = 'ready-' + q;
+  }, 350);
+})();
+</script>
+</body>
+</html>
